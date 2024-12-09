@@ -1,0 +1,185 @@
+Hello Sir Mulla, currently working on this task and i have applied your fix to the efp client api but i have a question, i check through the efp cient file and i could not find the following file for the efp client, do i need to create them or the cient doesnt have those file, kindl advise
+12 I couldnt find the prospect.php file for efp client
+16 I could not find product_filter/index.php file for efp client
+18 I could not fild the enrollement folder for coupon.php file /nxm/rep/code/office/php/rbr/enrollment/coupon.php
+
+Hello Sir Mulla,  
+
+I’m currently working on this task and have applied your fix to the EFP client API  https://3.basecamp.com/3526928/buckets/10144051/todos/8063084319#__recording_8063098920  . However, I have a question: I reviewed the EFP client files but couldn’t find the following files. Should I create them, or are they not part of the EFP client? Kindly advise.  
+
+Item 12 I couldn’t find the `prospect.php` file for the EFP client.  
+Item 16 I couldn’t find the `product_filter/index.php` file for the EFP client.  
+Item 18 I couldn’t locate the `enrollment` folder for the `coupon.php` file at `/nxm/rep/code/office/php/rbr/enrollment/coupon.php`.  
+
+Thank you.
+
+
+php artisan make:migration add_expiration_date_to_gift_cards --table="gift_cards"
+
+
+
+
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('gift_cards', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+ 	        $table->date('expiration_date')->nullable();
+            $table->string('description');
+            $table->string('business_id');  
+            $table->decimal('amount', 10, 2);  
+            $table->decimal('balance', 10, 2);  
+            $table->string('code', 50)->unique();  
+            $table->boolean('is_active')->default(true); 
+            $table->unsignedBigInteger('storefront_id')->nullable();  
+            $table->boolean('is_platform_wide')->default(false);  
+            $table->timestamps();
+
+            // Foreign key constraint
+            $table->foreign('business_id')->references('id')->on('users')->onDelete('cascade');  
+            $table->foreign('storefront_id')->references('id')->on('storefronts')->onDelete('set null');  
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('gift_cards');
+    }
+};
+
+
+
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class GiftCard extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'business_id', 'amount', 'balance', 'code', 'is_active', 'storefront_id', 'is_platform_wide', 'expiration_date', 'description'
+    ];
+
+    /**
+     * Get the business that owns the gift card.
+     */
+    public function business()
+    {
+        return $this->belongsTo(User::class, 'business_id');
+    }
+
+    /**
+     * Get the storefront where the gift card is valid.
+     */
+    public function storefront()
+    {
+        return $this->belongsTo(Storefront::class);
+    }
+
+    /**
+     * Get all transactions for the gift card.
+     */
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('transactions', function (Blueprint $table) {
+            $table->id();
+            $table->string('user_id'); 
+            $table->string('gift_card_id'); 
+            $table->enum('transaction_type', ['gift_card_creation', 'gift_card_redemption', 'gift_card_transfer', 'gift_card_purchase']);
+            $table->decimal('amount', 10, 2);  
+            $table->timestamps();
+
+            // Foreign keys
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');  
+            $table->foreign('gift_card_id')->references('id')->on('gift_cards')->onDelete('cascade'); 
+        });
+    }
+
+    public function down()
+    {
+        Schema::dropIfExists('transactions');
+    }
+};
+
+
+
+
+
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Transaction extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'user_id', 'gift_card_id', 'transaction_type', 'amount'
+    ];
+
+    /**
+     * Get the user who made the transaction.
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the gift card associated with the transaction.
+     */
+    public function giftCard()
+    {
+        return $this->belongsTo(GiftCard::class);
+    }
+}
